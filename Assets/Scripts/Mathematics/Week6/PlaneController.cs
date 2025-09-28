@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 namespace Mathematics.Week6
 {
@@ -55,10 +56,27 @@ namespace Mathematics.Week6
             transform.rotation = r;
 
             UpdatePosition();
-           
+
+            if (transform.position.x > MaxLimitX)
+            {
+                transform.position = new Vector3(MaxLimitX, transform.position.y, transform.position.z);
+            }
+            else if (transform.position.x < Min_LimitX)
+            {
+                transform.position = new Vector3(Min_LimitX, transform.position.y, transform.position.z);
+            }
+
+            if (transform.position.y > MaxLimitY)
+            {
+                transform.position = new Vector3(transform.position.x, MaxLimitY, transform.position.z);
+            }
+            else if (transform.position.y < Min_LimitY)
+            {
+                transform.position = new Vector3(transform.position.x, Min_LimitY, transform.position.z);
+            }
         }
 
-        
+
 
         //Pitch -> X Axis
         public void RotatePitch(InputAction.CallbackContext context)
@@ -80,17 +98,15 @@ namespace Mathematics.Week6
         private float _verticalDirection = 0f;
         private float _horizontalDirection = 0f;
         [SerializeField] private float velocitySpeed = 5f;
+        [SerializeField] private float returnSpeed = 0.5f; // velocidad del Lerp al volver al centro
 
         private Rigidbody _myRB;
 
         private void Start()
         {
             _myRB = GetComponent<Rigidbody>();
+            vidas = 3;
         }
-
-
-
-
 
 
 
@@ -116,7 +132,7 @@ namespace Mathematics.Week6
 
         public void TranslateVertical(InputAction.CallbackContext context)
         {
-            if (transform.position.y<= MaxLimitY && transform.position.y>= Min_LimitY)
+            if (transform.position.y <= MaxLimitY && transform.position.y >= Min_LimitY)
             {
                 _verticalDirection = context.ReadValue<float>();
             }
@@ -124,7 +140,7 @@ namespace Mathematics.Week6
             {
                 _verticalDirection = 0f;
             }
-            
+
         }
 
         public void TranslateHorizontal(InputAction.CallbackContext context)
@@ -137,17 +153,57 @@ namespace Mathematics.Week6
             {
                 _horizontalDirection = 0f;
             }
-                
+
         }
 
         private void UpdatePosition()
         {
-            _myRB.linearVelocity = new Vector3(-_horizontalDirection * velocitySpeed, -_verticalDirection * velocitySpeed, 0f);
+            // si no hay input, regresa al centro (0,0) suavemente
+            if (_horizontalDirection == 0f && _verticalDirection == 0f)
+            {
+                Vector3 target = new Vector3(0f, 0f, transform.position.z);
+                transform.position = Vector3.Lerp(transform.position, target, Time.fixedDeltaTime * returnSpeed);
+                _myRB.linearVelocity = Vector3.zero;
+            }
+            else
+            {
+                _myRB.linearVelocity = new Vector3(-_horizontalDirection * velocitySpeed, -_verticalDirection * velocitySpeed, 0f);
+            }
         }
-        [SerializeField] private float MaxLimitX=15f;
+        [SerializeField] private float MaxLimitX = 13f;
         [SerializeField] private float MaxLimitY = 6.39f;
-        [SerializeField] private float Min_LimitX=15f;
-        [SerializeField] private float Min_LimitY=-0.1f;
+        [SerializeField] private float Min_LimitX = -13f;
+        [SerializeField] private float Min_LimitY = -0.1f;
+
+
+
+        // ------------------- VIDA + GAME OVER -------------------
+
+        [Header("Vida del Avión")]
+        [SerializeField] private int vidas = 3;
+        [SerializeField] private Vector3 posicionInicial = Vector3.zero;
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (collision.gameObject.CompareTag("Enemy"))
+            {
+                vidas--;
+
+                Debug.Log("Vida perdida, vidas restantes: " + vidas);
+
+                if (vidas > 0)
+                {
+               
+                    transform.position = new Vector3(0f, 0f, transform.position.z);
+                    _myRB.linearVelocity = Vector3.zero;
+                }
+                else
+                {
+               
+                    SceneManager.LoadScene("GameOver");
+                }
+            }
+        }
     }
 
     [System.Serializable]
